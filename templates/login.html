@@ -1,0 +1,43 @@
+<html lang="en">
+    <head>
+        <title>Cam Login</title>
+        <style>
+            body {
+                background-color: black;
+                color: white;
+            }
+            .loginrow {
+                width: 200px;
+                margin: 10px;
+                padding: 10px;
+                position: relative;
+                display: inline-flex;
+                border-radius: 5px;
+                background-color: orange;
+            }
+            .loginrow input {
+                width: 110px;
+                position: absolute;
+                right: 10px;
+            }
+            .loginrow div {
+                width: 80;
+            }
+        </style>
+    </head>
+    <body>
+        <form style="display: table-caption" method="POST">
+            <div class="loginrow">
+                <div>Username</div>
+                <input type=text name=user />
+            </div>
+            <div class="loginrow">
+                <div>Password</div>
+                <input type=password name=pass />
+            </div>
+            <div style="position: relative; width: 240px">
+                <input style="position: absolute; top: 10px; right: 10px;" type=submit value=Login />
+            </div>
+        </form>
+    </body>
+</html>
