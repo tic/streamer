@@ -19,13 +19,23 @@ import re
 # Yeah, it's vulnerable to a ton of stuff. So?
 token = lambda usr, pas : sha256(str(usr + pas).encode()).hexdigest()
 
+# For small systems, like RaspberryPi, you may want to
+# keep track of the CPU temperature via an on-screen HUD
+track_cpu_temp = False
+
 # Define cameras and their parameters
+# Rotation options:
+# - None
+# - cv2.cv2.ROTATE_90_CLOCKWISE
+# - cv2.cv2.ROTATE_180
+# - cv2.cv2.ROTATE_90_COUNTERCLOCKWISE
 Cameras = {
-        0: {
-                'fps': 30,
-                'resolution': (854, 480),
-                'mode': cv2.COLOR_BGR2RGB,
-        }
+    0: {
+        'fps': 30,
+        'resolution': (854, 480),
+        'mode': cv2.COLOR_BGR2RGB,
+        'rotation': None
+    }
 }
 
 # Capture CPU temp on a self-contained loop
@@ -42,7 +52,7 @@ def cpu_temp_loop():
         cpu_temp_value = 'CPU Temp Unavailable'
     finally:
         threading.Timer(10.0, cpu_temp_loop).start()
-cpu_temp_loop()
+if track_cpu_temp: cpu_temp_loop()
 
 # Camera class - represents a single physical camera.
 class Camera:
@@ -52,6 +62,7 @@ class Camera:
         self.delta = 1.0 / Cameras[cam_id]['fps']
         self.res = Cameras[cam_id]['resolution']
         self.mode = Cameras[cam_id]['mode']
+        self.rotation = Cameras[cam_id]['rotation']
         self.last_frame = 0
         self.saved_frame = None
         self.mutex = threading.Lock()
@@ -73,17 +84,23 @@ class Camera:
                     frame = cv2.resize(frame, self.res, interpolation=cv2.INTER_AREA)
                     if self.mode is not None:
                         frame = cv2.cvtColor(frame, self.mode)
-                    frame = cv2.rotate(frame, cv2.cv2.ROTATE_180)
+
+                    if self.rotation is not None:
+                        frame = cv2.rotate(frame, self.rotation)
+
                     frame = cv2.putText(
                         frame, datetime.now().strftime('%D %H:%M:%S'),
                         (0, 18), cv2.FONT_HERSHEY_SIMPLEX,
                         0.60, (0, 255, 0), 1, cv2.LINE_AA
                     )
-                    frame = cv2.putText(
-                        frame, cpu_temp_value,
-                        (0, 38), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.60, (0, 255, 0), 1, cv2.LINE_AA
-                    )
+
+                    if track_cpu_temp:
+                        frame = cv2.putText(
+                            frame, cpu_temp_value,
+                            (0, 38), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.60, (0, 255, 0), 1, cv2.LINE_AA
+                        )
+
                     frame = Image.fromarray(frame, "RGB")
                     buf = io.BytesIO()
                     frame.save(buf, format='JPEG')
