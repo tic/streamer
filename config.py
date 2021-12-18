@@ -5,3 +5,6 @@ secret = b''
 logins = {
 
 }
+
+# Port to host the flask server on
+port = 8080
