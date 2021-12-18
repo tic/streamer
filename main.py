@@ -1,23 +1,32 @@
 #!/usr/bin/env python
-from importlib import import_module
 import os
-from flask import Flask, render_template, Response, session, redirect, request, send_from_directory
+from flask import (
+    Flask,
+    render_template,
+    Response,
+    session,
+    redirect,
+    request,
+    send_from_directory
+)
 import cv2
 from PIL import Image
-import numpy as np
 import io
 from time import time
 from datetime import datetime
 import threading
-import credentials
+import config
 from hashlib import sha256
 from functools import wraps
 import subprocess
 import re
 
+
 # Quick function to generate a browser auth token
 # Yeah, it's vulnerable to a ton of stuff. So?
-token = lambda usr, pas : sha256(str(usr + pas).encode()).hexdigest()
+def token(usr, passwd):
+    return sha256(str(usr + passwd).encode()).hexdigest()
+
 
 # For small systems, like RaspberryPi, you may want to
 # keep track of the CPU temperature via an on-screen HUD
@@ -38,21 +47,28 @@ Cameras = {
     }
 }
 
-# Capture CPU temp on a self-contained loop
 cpu_temp_value = 'CPU Temp Unavailable (loading)'
+
+
+# Capture CPU temp on a self-contained loop
 def cpu_temp_loop():
     global cpu_temp_value
     try:
         output = subprocess.check_output(['vcgencmd', 'measure_temp'])
         output = output.decode('utf-8')
-        val = re.search('temp=(\d+.\d+).*', output).group(1)
-        cpu_temp_value = 'CPU Temp: ' + val #+ u'\N{DEGREE SIGN}' + 'C'
+        val = re.search(r'temp=(\d+.\d+).*', output).group(1)
+        cpu_temp_value = 'CPU Temp: ' + val  # + u'\N{DEGREE SIGN}' + 'C'
     except Exception as err:
         print(err)
         cpu_temp_value = 'CPU Temp Unavailable'
     finally:
         threading.Timer(10.0, cpu_temp_loop).start()
-if track_cpu_temp: cpu_temp_loop()
+
+
+# Activate the CPU temperature tracking loop, if the flag is set
+if track_cpu_temp:
+    cpu_temp_loop()
+
 
 # Camera class - represents a single physical camera.
 class Camera:
@@ -71,7 +87,10 @@ class Camera:
         try:
             with self.mutex:
                 ctime = time()
-                if (ctime - self.last_frame > self.delta) or self.saved_frame is None:
+                if (
+                    (ctime - self.last_frame > self.delta)
+                    or self.saved_frame is None
+                ):
                     # If more than 1 frame's worth of time has elapsed,
                     # get a new frame.
                     if not self.vc.isOpened():
@@ -80,8 +99,11 @@ class Camera:
                     if not rval:
                         raise Exception("frame read failed")
 
-                    last_frame = ctime
-                    frame = cv2.resize(frame, self.res, interpolation=cv2.INTER_AREA)
+                    frame = cv2.resize(
+                        frame,
+                        self.res,
+                        interpolation=cv2.INTER_AREA
+                    )
                     if self.mode is not None:
                         frame = cv2.cvtColor(frame, self.mode)
 
@@ -106,10 +128,15 @@ class Camera:
                     frame.save(buf, format='JPEG')
                     self.saved_frame = buf.getvalue()
         except Exception as err:
-            print('[{}] frame update failed: {}'.format(ctime.strftime('%H:%M:%S'), err))
+            print(
+                '[{}] frame update failed: {}'.format(
+                    ctime.strftime('%H:%M:%S'), err
+                )
+            )
         finally:
             return self.saved_frame
 #
+
 
 # CameraManager class is used to wrap app Camera
 # instances and ensure duplicates aren't created.
@@ -126,10 +153,12 @@ class CameraManager:
         return cam_instance
 #
 
+
 # Initialize the camera manager
 cam_man = CameraManager()
 
-"""Video streaming generator function."""
+
+# Video streaming generator function.
 # Creates a generator which yields a camera feed frame-by-frame
 def StreamGenerator(cam_id):
     global cam_man
@@ -153,7 +182,8 @@ def StreamGenerator(cam_id):
 
 # Create the flask server using the stored secret
 app = Flask(__name__)
-app.secret_key = credentials.secret;
+app.secret_key = config.secret
+
 
 # Decorator which checks for login token before permitting access
 def require_login(f):
@@ -162,33 +192,43 @@ def require_login(f):
         # Look for a token in the session and see if it is a valid
         # token for the user they claim to be logged in as.
         try:
-            if session['access_token'] == token(session['user'], credentials.logins[session['user']]):
+            if session['access_token'] == token(
+                session['user'],
+                config.logins[session['user']]
+            ):
                 return f(*args, **kwargs)
         except KeyError:
             pass
         return redirect('/login')
-        # ^^ Redirect them to the login page if there is no valid token present.
+        # ^^ Redirect them to the login page if there is no valid token present
     return decorated
 
-"""Video streaming home page."""
+
+# Video streaming home page.
 @app.route('/')
 @require_login
 def index():
     return render_template('index.html')
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         try:
-            if credentials.logins[request.form['user']] == request.form['pass']:
+            expected_passwd = config.logins[request.form['user']]
+            if expected_passwd == request.form['pass']:
                 # login approved
-                session['access_token'] = token(request.form['user'], request.form['pass'])
+                session['access_token'] = token(
+                    request.form['user'],
+                    request.form['pass']
+                )
                 session['user'] = request.form['user']
                 return redirect('/')
         except KeyError:
             pass
     # login denied, default back to original return
     return render_template('login.html')
+
 
 @app.route('/logout')
 def logout():
@@ -199,7 +239,8 @@ def logout():
         pass
     return redirect('/login')
 
-"""Video streaming route. Put this in the src attribute of an img tag."""
+
+# Video streaming route. Put this in the src attribute of an img tag.
 @app.route('/feed/0')
 @require_login
 def video_feed():
@@ -208,10 +249,16 @@ def video_feed():
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
 
+
 # Serve the favicon :)
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'favicon.ico',
+        mimetype='image/vnd.microsoft.icon'
+    )
+
 
 # Spin up the flask server
 if __name__ == '__main__':
