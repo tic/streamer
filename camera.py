@@ -1,6 +1,6 @@
 import cv2
 from threading import Lock as Mutex, Timer
-from time import time
+from time import time, sleep
 from PIL import Image
 from datetime import datetime
 from io import BytesIO as io_BytesIO
@@ -31,8 +31,6 @@ def cpu_temp_loop():
     if loop:
       # Update the temperatures once per minute
       Timer(2.0, cpu_temp_loop).start()
-
-cpu_temp_loop()
 
 def get_osd_content(osd_item: str):
   if osd_item == 'time':
@@ -117,8 +115,13 @@ class Camera:
       print('[{}] frame update failed: {}'.format(ctime.strftime('%H:%M:%S'), err))
     finally:
       return self.saved_frame
-#
 
+  def flush(self):
+    for _ in range(10):
+      self.get_frame()
+      sleep(self.delta)
+
+cpu_temp_loop()
 cams = {}
 def get_camera_instance(cam_id):
   global cams

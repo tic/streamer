@@ -2,5 +2,8 @@
 
 {% block main %}
 <h1>Camera #{{camera.id}} -- {{ camera.name }}</h1>
+<div class="streamControls">
+  <div class="pausePlay pause"></div>
+</div>
 <img src="/feed/{{camera.id}}" />
 {% endblock %}

@@ -1,29 +1,39 @@
 from flask import Flask, render_template, Response, session, redirect, request, send_from_directory
 from os.path import join as os_pathjoin
+from os import walk as os_walk
 from hashlib import sha256
 from functools import wraps
 from time import sleep
 from camera import get_camera_instance
 from config import config
 
-token = lambda usr, pas : sha256(str(usr + pas).encode()).hexdigest()
+def token(user, passwd):
+  return sha256(str(user + passwd).encode()).hexdigest()
+
+def format_frame(raw_frame):
+  return (
+    b'--frame\r\n'
+    b'Content-Type: image/jpeg\r\n\r\n' + raw_frame + b'\r\n'
+  )
 
 html_config = config['html']
 page_title = html_config['page_title']
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='', static_folder='static')
 app.secret_key = config['secret']
 
 """Video streaming generator function."""
 def StreamGenerator(cam_id):
   camera = get_camera_instance(cam_id)
   while True:
-    frame = camera.get_frame()
-    yield (
-      b'--frame\r\n'
-      b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n'
-    )
+    raw_frame = camera.get_frame()
+    yield format_frame(raw_frame)
     sleep(camera.delta)
+
+def ImageGenerator(cam_id):
+  camera = get_camera_instance(cam_id)
+  camera.flush()
+  return format_frame(camera.get_frame())
 
 def require_login(f):
   @wraps(f)
@@ -84,10 +94,6 @@ def logout():
     pass
   return redirect('/login')
 
-@app.route('/favicon.ico')
-def favicon():
-  return send_from_directory(os_pathjoin(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
-
 """Video streaming route. Put this in the src attribute of an img tag."""
 for camera_id in config['cameras'].keys():
   @app.route(f'/feed/{camera_id}')
@@ -95,5 +101,13 @@ for camera_id in config['cameras'].keys():
   def video_feed():
     return Response(
       StreamGenerator(camera_id),
+      mimetype='multipart/x-mixed-replace; boundary=frame'
+    )
+
+  @app.route(f'/image/{camera_id}')
+  @require_login
+  def image_feed():
+    return Response(
+      ImageGenerator(camera_id),
       mimetype='multipart/x-mixed-replace; boundary=frame'
     )

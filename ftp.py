@@ -33,9 +33,7 @@ def send_photos():
       camera_instance = get_camera_instance(camera_id)
 
       # Flush the first few frames.. sometimes it gets stuck
-      for _ in range(5):
-        sleep(camera_instance.delta)
-        camera_instance.get_frame()
+      camera_instance.flush()
 
       # Get an image
       frame = camera_instance.get_frame()

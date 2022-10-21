@@ -35,6 +35,21 @@
                 flex-direction: row;
             }
 
+            .streamControls div {
+                font-size: 1.5rem;
+                height: 1.5rem;
+                width: 1.5rem;
+                margin: 0.5rem;
+            }
+
+            .streamControls .pausePlay.pause::after {
+                content: '⏸';
+            }
+
+            .streamControls .pausePlay.play::after {
+                content: '⏩';
+            }
+
             h1 {
                 font-size: 2.5rem;
                 font-weight: 400;
@@ -49,5 +64,7 @@
     <body>
         {% block main %}
         {% endblock %}
+        <script src="/js/util.js"></script>
+        <script src="/js/stream-controls.js"></script>
     </body>
 </html>
