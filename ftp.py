@@ -4,6 +4,7 @@ from threading import Timer
 from os import remove as os_remove
 from config import config
 from camera import get_camera_instance
+from time import sleep
 
 do_images_config = config['do_images']
 camera_ids = config['do_images']['cameras']
@@ -33,6 +34,7 @@ def send_photos():
 
       # Flush the first few frames.. sometimes it gets stuck
       for _ in range(5):
+        sleep(camera_instance.delta)
         camera_instance.get_frame()
 
       # Get an image
