@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+
+{% block main %}
+<h1>Camera #{{camera.id}} -- {{ camera.name }}</h1>
+<img src="/feed/{{camera.id}}" />
+{% endblock %}

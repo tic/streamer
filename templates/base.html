@@ -1,0 +1,53 @@
+<html lang="en">
+    <head>
+        <title>{{page_title}}</title>
+        <style>
+            body {
+                display: flex;
+                background-color: black;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            .cameraEntry {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .cameraEntry span {
+                font-size: 1.5rem;
+                color: whitesmoke;
+            }
+        
+            .cameraEntry a {
+                font-size: 1.5rem;
+                color: deepskyblue;
+            }
+
+            .cameraEntry div span::before {
+                margin-left: 2rem;
+                content:  '⤷ ';
+                color: whitesmoke;
+            }
+
+            .cameraEntry div {
+                display: flex;
+                flex-direction: row;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+                font-weight: 400;
+                color: whitesmoke;
+            }
+
+            img {
+                max-width: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        {% block main %}
+        {% endblock %}
+    </body>
+</html>

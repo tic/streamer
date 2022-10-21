@@ -1,23 +1,16 @@
-<html lang="en">
-    <head>
-        <title>Budget Streamer</title>
-        <style>
-            body {
-                display: flex;
-                background-color: black;
-                flex-direction: column;
-                justify-content: center;
-            }
-            h1 {
-                color: white;
-            }
-            img {
-                max-width: 100%;
-            }
-        </style>
-    </head>
-    <body>
-        <h1>Grow Cam</h1>
-        <img src="/feed/0">
-    </body>
-</html>
+{% extends 'base.html' %}
+
+{% block main %}
+<h1>Camera Directory</h1>
+<p>A list of cameras connected to this system.</p>
+
+{% for camera in cameras %}
+<div class="cameraEntry">
+  <span>Camera #{{camera.id}} -- {{camera.name}}</span>
+  <div>
+    <span />
+    <a href="/camera/{{camera.id}}">Watch Live</a>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}
