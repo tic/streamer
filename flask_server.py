@@ -26,14 +26,14 @@ app.secret_key = config['secret']
 def StreamGenerator(cam_id):
   camera = get_camera_instance(cam_id)
   while True:
-    raw_frame = camera.get_frame()
+    raw_frame = camera.get_bytes_frame()
     yield format_frame(raw_frame)
     sleep(camera.delta)
 
 def ImageGenerator(cam_id):
   camera = get_camera_instance(cam_id)
   camera.flush()
-  return format_frame(camera.get_frame())
+  return format_frame(camera.get_bytes_frame())
 
 def require_login(f):
   @wraps(f)

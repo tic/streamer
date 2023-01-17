@@ -44,6 +44,9 @@ config = {
     'cameras': [0], # list of camera ids to save images for
     'offer_timelapse_downloads': getenv('STREAMER_OFFER_TIMELAPSE') == 'true',
     'ftp': json_loads(getenv('STREAMER_FTP_CONFIG', '{}', alert_if_missing=getenv('STREAMER_DO_IMAGES') == 'true')),
+    'do_darkness_check': getenv('STREAMER_DO_DARKNESS_CHECK') == 'true',
+    'darkness_threshold': float(getenv('STREAMER_DARKNESS_THRESHOLD', '0')),
+    'save_interval': float(getenv('STREAMER_SAVE_INTERVAL', '1200.0'))
   },
 
   # Tweak aspects of the html pages

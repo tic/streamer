@@ -3,12 +3,14 @@ from datetime import datetime
 from threading import Timer
 from os import remove as os_remove
 from config import config
-from camera import get_camera_instance
-from time import sleep
+from camera import get_camera_instance, get_image_intensity
 
 do_images_config = config['do_images']
-camera_ids = config['do_images']['cameras']
+camera_ids = do_images_config['cameras']
 do_ftp = do_images_config['enabled'] is True
+do_darkness_check = do_images_config['do_darkness_check'] is True
+save_interval = do_images_config['save_interval']
+darkness_threshold = do_images_config['darkness_threshold']
 FTP_HOST = ''
 FTP_USER = ''
 FTP_PASSWD = ''
@@ -36,7 +38,12 @@ def send_photos():
       camera_instance.flush()
 
       # Get an image
-      frame = camera_instance.get_frame()
+      frame = camera_instance.get_cv2_frame()
+
+      # Do a darkness check, if required
+      if do_darkness_check and get_image_intensity(frame) < darkness_threshold:
+        print('[CAMERA] skipped FTP save -- frame too dark')
+        return
 
       # Store image in temp file
       with open(filename, 'wb') as fp:
@@ -51,4 +58,4 @@ def send_photos():
     except Exception as err:
       print(err)
     finally:
-      Timer(1200.0, send_photos).start()
+      Timer(save_interval, send_photos).start()

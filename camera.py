@@ -6,10 +6,12 @@ from datetime import datetime
 from io import BytesIO as io_BytesIO
 from subprocess import check_output as sp_check_output
 from re import search as re_search, match as re_match
+import numpy as np
+
+from cv2 import Mat
 from config import config
 
-
-cpu_temp_value = 'CPU Temp Unavailable (loading)'
+cpu_temp_value = 'T: LDNG'
 def cpu_temp_loop():
   global cpu_temp_value
   loop = True
@@ -17,27 +19,48 @@ def cpu_temp_loop():
     output = sp_check_output(['vcgencmd', 'measure_temp'])
     output = output.decode('utf-8')
     val = re_search('temp=(\d+.\d+).*', output).group(1)
-    cpu_temp_value = f'CPU Temp: {val} C'
+    cpu_temp_value = f'T: {val}'
   except Exception as err:
     if re_match(r".*No such file .* 'vcgencmd'", str(err)):
       print('[CAMERA] warning: system does not support cpu temperature probing')
       loop = False
-      cpu_temp_value = 'CPU Temp Unsupported'
+      cpu_temp_value = 'T: UNSP'
       return
     
     print(err)
-    cpu_temp_value = 'CPU Temp Unavailable'
+    cpu_temp_value = 'T: UNAV'
   finally:
     if loop:
       # Update the temperatures once per minute
       Timer(2.0, cpu_temp_loop).start()
 
-def get_osd_content(osd_item: str):
+def get_image_intensity(frame: Mat):
+  pixels = np.float32(frame.reshape(-1, 3))
+
+  n_colors = 5
+  criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, .1)
+  flags = cv2.KMEANS_RANDOM_CENTERS
+
+  _, labels, palette = cv2.kmeans(pixels, n_colors, None, criteria, 10, flags)
+  _, counts = np.unique(labels, return_counts=True)
+  dominant = palette[np.argmax(counts)]
+  
+  intensity: float = dominant.mean()
+  return intensity.__round__(2)
+
+def get_osd_content(osd_item: str, frame: Mat):
   if osd_item == 'time':
-    return datetime.now().strftime('%D %H:%M:%S')
+    return datetime.strftime(datetime.now(), '%D %H:%M:%S')
 
   if osd_item == 'cputemp':
     return str(cpu_temp_value)
+  
+  if osd_item == 'brightness':
+    intensity = get_image_intensity(frame)
+    while intensity[-3] != '.':
+      rounded_intensity += '0'
+    
+    return f'I: {intensity}'
 
   return None
 
@@ -50,7 +73,8 @@ class Camera:
     self.mode = cameras[cam_id]['mode']
     self.osd = cameras[cam_id]['osd']
     self.last_frame = 0
-    self.saved_frame = None
+    self.saved_frame: Mat = None
+    self.saved_frame_bytes: bytes = None
     self.mutex = Mutex()
 
     requested_rotation = cameras[cam_id]['rotation']
@@ -63,7 +87,7 @@ class Camera:
     else:
       self.rotation = None
 
-  def get_frame(self):
+  def try_frame_update(self):
     try:
       with self.mutex:
         ctime = time()
@@ -76,7 +100,7 @@ class Camera:
             raise Exception("frame read failed")
 
           self.last_frame = ctime
-          frame = cv2.resize(frame, self.res, interpolation=cv2.INTER_AREA)
+          frame: Mat = cv2.resize(frame, self.res, interpolation=cv2.INTER_AREA)
 
           # Adjust color if necessary
           if self.mode is not None:
@@ -89,7 +113,7 @@ class Camera:
           # Apply the OSD
           line = 0
           for item in self.osd['items']:
-            content = get_osd_content(item)
+            content = get_osd_content(item, frame)
             if content is None:
               continue
 
@@ -110,15 +134,22 @@ class Camera:
           frame_out = Image.fromarray(frame, "RGB")
           buf = io_BytesIO()
           frame_out.save(buf, format='JPEG')
-          self.saved_frame = buf.getvalue()
+          self.saved_frame = frame
+          self.saved_frame_bytes = buf.getvalue()
     except Exception as err:
-      print('[{}] frame update failed: {}'.format(ctime.strftime('%H:%M:%S'), err))
-    finally:
-      return self.saved_frame
+      print('[{}] frame update failed: {}'.format(datetime.strftime(datetime.now(), '%H:%M:%S'), err))
+
+  def get_bytes_frame(self):
+    self.try_frame_update()
+    return self.saved_frame_bytes
+  
+  def get_cv2_frame (self):
+    self.try_frame_update()
+    return self.saved_frame
 
   def flush(self):
     for _ in range(10):
-      self.get_frame()
+      self.try_frame_update()
       sleep(self.delta)
 
 cpu_temp_loop()
