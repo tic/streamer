@@ -23,14 +23,25 @@ config = {
   # Camera configuration.
   'cameras': {
     0: {
-      'name': 'Live Camera',
-      'fps': 5,
-      'resolution': (854, 480),
+      'name': 'Integrated Camera',
+      'fps': 24,
+      'resolution': (640, 480),
       'mode': cv2.COLOR_BGR2RGB,
       'rotation': '0',
       'osd': {
         'color': (0, 255, 0),
-        'items': ['time', 'cputemp'],
+        'items': ['time', 'cputemp', 'intensity'],
+      },
+    },
+    2: {
+      'name': 'IR Camera',
+      'fps': 24,
+      'resolution': (856, 480),
+      'mode': cv2.COLOR_BGR2RGB,
+      'rotation': '0',
+      'osd': {
+        'color': (0, 0, 255),
+        'items': ['time', 'intensity'],
       },
     }
   },

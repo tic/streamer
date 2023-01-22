@@ -28,7 +28,6 @@ def StreamGenerator(cam_id):
   while True:
     raw_frame = camera.get_bytes_frame()
     yield format_frame(raw_frame)
-    sleep(camera.delta)
 
 def ImageGenerator(cam_id):
   camera = get_camera_instance(cam_id)
@@ -95,19 +94,18 @@ def logout():
   return redirect('/login')
 
 """Video streaming route. Put this in the src attribute of an img tag."""
-for camera_id in config['cameras'].keys():
-  @app.route(f'/feed/{camera_id}')
-  @require_login
-  def video_feed():
-    return Response(
-      StreamGenerator(camera_id),
-      mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
+@app.route(f'/feed/<camera_id>')
+@require_login
+def video_feed(camera_id):
+  return Response(
+    StreamGenerator(camera_id),
+    mimetype='multipart/x-mixed-replace; boundary=frame'
+  )
 
-  @app.route(f'/image/{camera_id}')
-  @require_login
-  def image_feed():
-    return Response(
-      ImageGenerator(camera_id),
-      mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
+@app.route(f'/image/<camera_id>')
+@require_login
+def image_feed(camera_id):
+  return Response(
+    ImageGenerator(camera_id),
+    mimetype='multipart/x-mixed-replace; boundary=frame'
+  )

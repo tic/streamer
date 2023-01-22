@@ -1,14 +1,14 @@
+import numpy as np
 import cv2
+from cv2 import Mat
 from threading import Lock as Mutex, Timer
 from time import time, sleep
 from PIL import Image
 from datetime import datetime
 from io import BytesIO as io_BytesIO
 from subprocess import check_output as sp_check_output
+from imutils.video import VideoStream as Vs
 from re import search as re_search, match as re_match
-import numpy as np
-
-from cv2 import Mat
 from config import config
 
 cpu_temp_value = 'T: LDNG'
@@ -55,29 +55,55 @@ def get_osd_content(osd_item: str, frame: Mat):
   if osd_item == 'cputemp':
     return str(cpu_temp_value)
   
-  if osd_item == 'brightness':
-    intensity = get_image_intensity(frame)
+  if osd_item == 'intensity':
+    intensity = str(get_image_intensity(frame))
     while intensity[-3] != '.':
-      rounded_intensity += '0'
-    
+      intensity += '0'
+
     return f'I: {intensity}'
 
   return None
 
+def apply_osd_content(frame, osd_items, osd_color):
+  line = 0
+  for item in osd_items:
+    content = get_osd_content(item, frame)
+    if content is None:
+      continue
+
+    position = (0, line * 20 + 18)
+    line += 1
+    frame = cv2.putText(
+      frame,
+      content,
+      position,
+      cv2.FONT_HERSHEY_SIMPLEX,
+      0.60,
+      osd_color,
+      1,
+      cv2.LINE_AA
+    )
+
+  return frame
+
 class Camera:
   def __init__(self, cam_id):
-    cameras = config['cameras']
-    self.vc = cv2.VideoCapture(cam_id)
-    self.delta = 1.0 / cameras[cam_id]['fps']
-    self.res = cameras[cam_id]['resolution']
-    self.mode = cameras[cam_id]['mode']
-    self.osd = cameras[cam_id]['osd']
+    camera = config['cameras'][cam_id]
+
+    # Set up video reader
+    self.Vs = Vs(cam_id, False, camera['resolution'], camera['fps']).start()
+
+    # Other instance vars
+    self.delta = 1.0 / camera['fps']
+    self.res = camera['resolution']
+    self.mode = camera['mode']
+    self.osd = camera['osd']
     self.last_frame = 0
     self.saved_frame: Mat = None
     self.saved_frame_bytes: bytes = None
     self.mutex = Mutex()
 
-    requested_rotation = cameras[cam_id]['rotation']
+    requested_rotation = camera['rotation']
     if (requested_rotation == '90'):
       self.rotation = cv2.ROTATE_90_CLOCKWISE
     elif (requested_rotation == '180'):
@@ -87,17 +113,16 @@ class Camera:
     else:
       self.rotation = None
 
+  def __exit__(self):
+    self.Vs.stop()
+
   def try_frame_update(self):
     try:
       with self.mutex:
         ctime = time()
+        # If more than 1 frame's worth of time has elapsed get a new frame.
         if (ctime - self.last_frame > self.delta) or self.saved_frame is None:
-          # If more than 1 frame's worth of time has elapsed get a new frame.
-          if not self.vc.isOpened():
-            raise Exception("video stream closed unexpectedly")
-          rval, frame = self.vc.read()
-          if not rval:
-            raise Exception("frame read failed")
+          frame = self.Vs.read()
 
           self.last_frame = ctime
           frame: Mat = cv2.resize(frame, self.res, interpolation=cv2.INTER_AREA)
@@ -111,24 +136,7 @@ class Camera:
             frame = cv2.rotate(frame, self.rotation)
 
           # Apply the OSD
-          line = 0
-          for item in self.osd['items']:
-            content = get_osd_content(item, frame)
-            if content is None:
-              continue
-
-            position = (0, line * 20 + 18)
-            line += 1
-            frame = cv2.putText(
-              frame,
-              content,
-              position,
-              cv2.FONT_HERSHEY_SIMPLEX,
-              0.60,
-              self.osd['color'],
-              1,
-              cv2.LINE_AA
-            )
+          frame = apply_osd_content(frame, self.osd['items'], self.osd['color'])
 
           # Save the frame
           frame_out = Image.fromarray(frame, "RGB")
@@ -156,9 +164,10 @@ cpu_temp_loop()
 cams = {}
 def get_camera_instance(cam_id):
   global cams
+  cam_id_int = int(cam_id)
   try:
-    cam_instance = cams[cam_id]
+    cam_instance = cams[cam_id_int]
   except KeyError:
-    cam_instance = Camera(cam_id)
-    cams[cam_id] = cam_instance
+    cam_instance = Camera(cam_id_int)
+    cams[cam_id_int] = cam_instance
   return cam_instance
