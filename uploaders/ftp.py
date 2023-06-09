@@ -3,7 +3,7 @@ from datetime import datetime
 from threading import Timer
 from os import remove as os_remove
 from config import config
-from camera import get_camera_instance, get_image_intensity
+from camera.camera import get_camera_instance, get_image_intensity
 
 do_images_config = config['do_images']
 camera_ids = do_images_config['cameras']

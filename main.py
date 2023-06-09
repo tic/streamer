@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from config import config
-from flask_server import app
-from ftp import send_photos
+from web.flask_server import app
+from uploaders.ftp import send_photos
 from sys import argv
 
 """
@@ -36,7 +36,7 @@ def video():
   from imutils.video import VideoStream as Vs
   from camera import apply_osd_content
   from time import sleep
-  vs = Vs(2, False, (1920, 1080), 24).start()
+  vs = Vs(0, False, (1920, 1080), 24).start()
 
   try:
     while True:

@@ -33,17 +33,17 @@ config = {
         'items': ['time', 'cputemp', 'intensity'],
       },
     },
-    2: {
-      'name': 'IR Camera',
-      'fps': 24,
-      'resolution': (856, 480),
-      'mode': cv2.COLOR_BGR2RGB,
-      'rotation': '0',
-      'osd': {
-        'color': (0, 0, 255),
-        'items': ['time', 'intensity'],
-      },
-    }
+    # 2: {
+    #   'name': 'IR Camera',
+    #   'fps': 24,
+    #   'resolution': (856, 480),
+    #   'mode': cv2.COLOR_BGR2RGB,
+    #   'rotation': '0',
+    #   'osd': {
+    #     'color': (0, 0, 255),
+    #     'items': ['time', 'intensity'],
+    #   },
+    # }
   },
 
   # Port to host the flask server on.

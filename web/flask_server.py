@@ -1,10 +1,7 @@
-from flask import Flask, render_template, Response, session, redirect, request, send_from_directory
-from os.path import join as os_pathjoin
-from os import walk as os_walk
+from flask import Flask, render_template, Response, session, redirect, request
 from hashlib import sha256
 from functools import wraps
-from time import sleep
-from camera import get_camera_instance
+from camera.camera import get_camera_instance
 from config import config
 
 def token(user, passwd):
@@ -19,7 +16,7 @@ def format_frame(raw_frame):
 html_config = config['html']
 page_title = html_config['page_title']
 
-app = Flask(__name__, static_url_path='', static_folder='static')
+app = Flask(__name__, static_url_path='', static_folder='static', template_folder='templates')
 app.secret_key = config['secret']
 
 """Video streaming generator function."""
