@@ -1,3 +1,4 @@
+from threading import Timer
 from flask import Flask, render_template, Response, session, redirect, request
 from hashlib import sha256
 from functools import wraps
@@ -13,11 +14,11 @@ def format_frame(raw_frame):
     b'Content-Type: image/jpeg\r\n\r\n' + raw_frame + b'\r\n'
   )
 
-html_config = config['html']
-page_title = html_config['page_title']
+web_config = config['web']
+page_title = web_config['page_title']
 
 app = Flask(__name__, static_url_path='', static_folder='static', template_folder='templates')
-app.secret_key = config['secret']
+app.secret_key = web_config['secret']
 
 """Video streaming generator function."""
 def StreamGenerator(cam_id):
@@ -35,7 +36,7 @@ def require_login(f):
   @wraps(f)
   def decorated(*args, **kwargs):
     try:
-      if session['access_token'] == token(session['user'], config['logins'][session['user']]):
+      if session['access_token'] == token(session['user'], web_config['logins'][session['user']]):
         return f(*args, **kwargs)
     except KeyError:
       pass
@@ -71,7 +72,7 @@ def camera(raw_camera_id: str):
 def login():
   if request.method == 'POST':
     try:
-      if config['logins'][request.form['user']] == request.form['pass']:
+      if web_config['logins'][request.form['user']] == request.form['pass']:
         # Login approved
         session['access_token'] = token(request.form['user'], request.form['pass'])
         session['user'] = request.form['user']
@@ -106,3 +107,9 @@ def image_feed(camera_id):
     ImageGenerator(camera_id),
     mimetype='multipart/x-mixed-replace; boundary=frame'
   )
+
+def run_app():
+  if web_config['enabled']:
+    Timer(0, lambda: app.run(host='0.0.0.0', port=web_config['port'], threaded=True)).start()
+  else:
+    print('[FLASK] web server disabled')
