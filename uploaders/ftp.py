@@ -1,6 +1,17 @@
 import ftplib
 from uploaders.common import Uploader
 
+def verify_params(params: dict):
+  try:
+    params['host']
+    params['username']
+    params['password']
+    params['path']
+    return True
+  except KeyError:
+    print('[FTP] invalid ftp configuration; expected params: host, username, password, path')
+    return False
+
 def upload_file(uploader: Uploader, filename: str):
   try:
     print('[FTP] conducting upload')

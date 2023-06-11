@@ -1,5 +1,4 @@
 from datetime import datetime
-from importlib import import_module
 from threading import Timer
 from os import remove as os_remove
 from camera.camera import get_camera_instance, get_image_intensity
@@ -14,11 +13,7 @@ save_interval = config['image_upload']['save_interval']
 
 def send_photo(filename: str):
   for uploader in upload_config:
-    try:
-      module = import_module(f'uploaders.{uploader.type}')
-      getattr(module, 'upload_file')(uploader, filename)
-    except ModuleNotFoundError:
-      print(f'[IMUPLOAD] unknown uploader "{uploader.type}"')
+    uploader.execute(filename)
 
 def upload_loop():
   print('[IMUPLOAD] running uploaders')
