@@ -25,7 +25,7 @@ class Uploader:
 
     if not exists:
       raise UploaderError(f'unknown uploader "{self.type}"')
-  
+
   def execute(self, filename: str):
     module = import_module(f'uploaders.{self.type}')
     getattr(module, 'upload_file')(self, filename)

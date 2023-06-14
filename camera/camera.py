@@ -26,13 +26,12 @@ def cpu_temp_loop():
       loop = False
       cpu_temp_value = 'T: UNSP'
       return
-    
+
     print(err)
     cpu_temp_value = 'T: UNAV'
   finally:
     if loop:
-      # Update the temperatures once per minute
-      Timer(2.0, cpu_temp_loop).start()
+      Timer(config['image_upload']['save_interval'], cpu_temp_loop).start()
 
 def get_image_intensity(frame: Mat):
   pixels = np.float32(frame.reshape(-1, 3))
@@ -44,7 +43,7 @@ def get_image_intensity(frame: Mat):
   _, labels, palette = cv2.kmeans(pixels, n_colors, None, criteria, 10, flags)
   _, counts = np.unique(labels, return_counts=True)
   dominant = palette[np.argmax(counts)]
-  
+
   intensity: float = dominant.mean()
   return intensity.__round__(2)
 
@@ -54,7 +53,7 @@ def get_osd_content(osd_item: str, frame: Mat):
 
   if osd_item == 'cputemp':
     return str(cpu_temp_value)
-  
+
   if osd_item == 'intensity':
     intensity = str(get_image_intensity(frame))
     while intensity[-3] != '.':
@@ -150,7 +149,7 @@ class Camera:
   def get_bytes_frame(self):
     self.try_frame_update()
     return self.saved_frame_bytes
-  
+
   def get_cv2_frame (self):
     self.try_frame_update()
     return self.saved_frame
