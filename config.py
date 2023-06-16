@@ -1,8 +1,7 @@
+import cv2
 from dotenv import load_dotenv
 from os import getenv as os_getenv
 from json import loads as json_loads
-import cv2
-
 from uploaders.common import Uploader
 
 load_dotenv()

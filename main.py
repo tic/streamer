@@ -1,13 +1,28 @@
 #!/usr/bin/env python
 from sys import argv
-from util import bcolors, timestamp
+from util import bcolors, log_message, time_string, timestamp
+from io import StringIO
 
 sysprint = __builtins__.print
-__builtins__.print = lambda *args, **kwargs: sysprint(
-  f'[{bcolors.OKGREEN}{timestamp()}{bcolors.ENDC}]',
-  *args,
-  **kwargs,
-)
+def enhanced_print(*args, **kwargs):
+  ts = timestamp()
+  sysprint(
+    f'[{bcolors.OKGREEN}{ts}{bcolors.ENDC}]',
+    *args,
+    **kwargs,
+  )
+
+  output_buffer = StringIO()
+  sysprint(
+    f'[{ts}]',
+    *args,
+    file=output_buffer,
+    **kwargs,
+  )
+
+  log_message(output_buffer.getvalue())
+
+__builtins__.print = enhanced_print
 
 """
 Test the ports and returns a tuple with the available ports and the ones that are working.
@@ -61,6 +76,7 @@ if __name__ == '__main__':
   if len(argv) == 1:
     from uploaders.imupload import run_uploaders
     from web.flask_server import run_app
+    print(f'[ENTRYPOINT] STARTING APPLICATION | {time_string()}')
     run_app()
     run_uploaders()
   elif argv[1] == 'list':

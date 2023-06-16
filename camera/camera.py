@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-from cv2 import Mat
 from threading import Lock as Mutex, Timer
 from time import time, sleep
 from PIL import Image
@@ -27,13 +26,13 @@ def cpu_temp_loop():
       cpu_temp_value = 'T: UNSP'
       return
 
-    print(err)
+    print(f'[CAMERA] cpu temp probe error: {err}')
     cpu_temp_value = 'T: UNAV'
   finally:
     if loop:
       Timer(config['image_upload']['save_interval'], cpu_temp_loop).start()
 
-def get_image_intensity(frame: Mat):
+def get_image_intensity(frame: cv2.Mat):
   pixels = np.float32(frame.reshape(-1, 3))
 
   n_colors = 5
@@ -47,7 +46,7 @@ def get_image_intensity(frame: Mat):
   intensity: float = dominant.mean()
   return intensity.__round__(2)
 
-def get_osd_content(osd_item: str, frame: Mat):
+def get_osd_content(osd_item: str, frame: cv2.Mat):
   if osd_item == 'time':
     return datetime.strftime(datetime.now(), '%D %H:%M:%S')
 
@@ -98,7 +97,7 @@ class Camera:
     self.mode = camera['mode']
     self.osd = camera['osd']
     self.last_frame = 0
-    self.saved_frame: Mat = None
+    self.saved_frame: cv2.Mat = None
     self.saved_frame_bytes: bytes = None
     self.mutex = Mutex()
 
@@ -124,7 +123,7 @@ class Camera:
           frame = self.Vs.read()
 
           self.last_frame = ctime
-          frame: Mat = cv2.resize(frame, self.res, interpolation=cv2.INTER_AREA)
+          frame: cv2.Mat = cv2.resize(frame, self.res, interpolation=cv2.INTER_AREA)
 
           # Adjust color if necessary
           if self.mode is not None:
@@ -144,7 +143,7 @@ class Camera:
           self.saved_frame = frame
           self.saved_frame_bytes = buf.getvalue()
     except Exception as err:
-      print('[{}] frame update failed: {}'.format(datetime.strftime(datetime.now(), '%H:%M:%S'), err))
+      print(f'[CAMERA] frame update failed: {err}')
 
   def get_bytes_frame(self):
     self.try_frame_update()

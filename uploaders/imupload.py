@@ -1,11 +1,13 @@
 from datetime import datetime
 from threading import Timer
 from os import remove as os_remove
+from typing import List
 from camera.camera import get_camera_instance, get_image_intensity
 from config import config
+from uploaders.common import Uploader
 
 is_upload_enabled = config['image_upload']['enabled']
-upload_config = config['image_upload']['uploader_config']
+upload_config: List[Uploader] = config['image_upload']['uploader_config']
 camera_ids = config['image_upload']['camera_ids']
 do_darkness_check = config['image_upload']['do_darkness_check']
 darkness_threshold = config['image_upload']['darkness_threshold']
@@ -13,7 +15,10 @@ save_interval = config['image_upload']['save_interval']
 
 def send_photo(filename: str):
   for uploader in upload_config:
-    uploader.execute(filename)
+    try:
+      uploader.execute(filename)
+    except Exception as err:
+      print(f'[IMUPLOAD] unexpected uploader failure in uploader "{uploader.type}": {err}')
 
 def upload_loop():
   print('[IMUPLOAD] running uploaders')
@@ -47,8 +52,9 @@ def upload_loop():
       # Clean up the temp file
       os_remove(filename)
     except Exception as err:
-      print(err)
+      print(f'[IMUPLOAD] unexpected frame capture error: {err}')
     finally:
+      print(f'[IMUPLOAD] upload iteration complete')
       Timer(save_interval, upload_loop).start()
 
 def run_uploaders():

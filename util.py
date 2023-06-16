@@ -11,3 +11,14 @@ class bcolors:
   ENDC = '\033[0m'
   BOLD = '\033[1m'
   UNDERLINE = '\033[4m'
+
+def log_message(message: str):
+  try:
+    with open(f'logs/{datetime.strftime(datetime.now(), "%Y.%m")}.streamer.log', 'a') as fp:
+      fp.write(message)
+  except:
+    # Can't do a regular print statement because that could create a cyclical failure.
+    pass
+
+def time_string():
+  return datetime.strftime(datetime.now(), '%Y.%m.%d-%H:%M:%S')
